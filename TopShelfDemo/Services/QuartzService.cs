@@ -1,20 +1,18 @@
-﻿using Quartz;
+﻿using Autofac;
+using Quartz;
 using Quartz.Impl;
 using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
-namespace TopShelfDemo.Jobs
+namespace TopShelfDemo.Services
 {
-    public class SpecialService
+    public class QuartzService
     {
         private IScheduler scheduler;
-        public SpecialService()
-        {
+        public QuartzService() {
             if (scheduler == null)
             {
                 // Grab the Scheduler instance from the Factory
@@ -22,10 +20,12 @@ namespace TopShelfDemo.Jobs
                 scheduler = factory.GetScheduler().Result;
             }
         }
+
         public async Task Start()
         {
             await RunJobs();
         }
+
         public async Task Stop()
         {
             //To do something

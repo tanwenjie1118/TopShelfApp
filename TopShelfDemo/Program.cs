@@ -1,22 +1,34 @@
-﻿using System;
+﻿using Autofac;
+using Microsoft.Extensions.Hosting;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Topshelf;
-using TopShelfDemo.Jobs;
+using TopShelfDemo;
+using TopShelfDemo.Services;
 
 namespace ConsoleApp1
 {
     class Program
     {
+        private static readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        private static readonly CancellationToken canceltoken = cancellationTokenSource.Token;
         static async Task Main(string[] args)
         {
-            RunTopShelfWinService();
+            //RunTopShelfWinService();
+
+            var taskcancel = StopConsole();
+            var taskrunning = RunSelfHostServices(args);
+
+            Task.WaitAll(taskrunning, taskcancel);
+
         }
 
         private static async Task RunConsoleJob()
         {
             try
             {
-                var service = new SpecialService();
+                var service = new QuartzService();
                 await service.Start();
             }
             catch (Exception ex)
@@ -32,13 +44,13 @@ namespace ConsoleApp1
             // configurating service factory
             HostFactory.Run(x =>
             {
-                x.Service<SpecialService>(s =>
+                x.Service<QuartzService>(s =>
                 {
                     // services want to run
-                    s.ConstructUsing(name => new SpecialService());
+                    s.ConstructUsing(name => new QuartzService());
 
                     // when service started
-                    s.WhenStarted(async tc =>await tc.Start());
+                    s.WhenStarted(async tc => await tc.Start());
 
                     // when service stopped
                     s.WhenStopped(async tc => await tc.Stop());
@@ -56,6 +68,24 @@ namespace ConsoleApp1
                 // Service name
                 x.SetServiceName("TopShelfJobService");
             });
+        }
+
+
+        private static Task RunSelfHostServices(string[] args)
+        {
+            using var host = SelfHostBuilder.CreateHostBuilder(args).Build();
+            return host.RunAsync(canceltoken);
+        }
+
+        private static Task StopConsole()
+        {
+            //return Task.CompletedTask;
+            return new TaskFactory().StartNew(() =>
+             {
+                 Thread.Sleep(15000);
+                 cancellationTokenSource.Cancel();
+             });
+
         }
     }
 }
